@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatHeader from '@/components/ChatHeader';
 import MessageInput from '@/components/MessageInput';
 import UserMessage from '@/components/UserMessage';
-import AIMessage from '@/components/AIMessage';
 
 interface Message {
   timestamp: string;
