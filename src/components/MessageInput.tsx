@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
-import { Mic } from 'lucide-react';
+import { Mic, Send, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -40,6 +39,16 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isProcessing
           className="flex-1 bg-transparent focus:outline-none text-gray-700 placeholder-gray-400"
           disabled={isProcessing}
         />
+        
+        <Button 
+          type="submit" 
+          variant="ghost" 
+          size="icon" 
+          disabled={!message.trim() || isProcessing}
+          className="rounded-full text-primary hover:bg-primary/10 hover:text-primary"
+        >
+          <Send className="h-5 w-5" />
+        </Button>
         
         <Button 
           type="button" 
