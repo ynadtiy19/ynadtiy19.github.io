@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatHeader from '@/components/ChatHeader';
 import MessageInput from '@/components/MessageInput';
 import UserMessage from '@/components/UserMessage';
+import { toast } from '@/hooks/use-toast';
 
 interface Message {
   timestamp: string;
@@ -70,26 +71,28 @@ const Index = () => {
       // Create timestamp
       const timestamp = Date.now().toString();
       
-      // Fetch current data first
-      const response = await fetch(apiUrl);
-      const currentData = await response.json();
+      // Create the message object with only the new message
+      const newMessageKey = `${timestamp}-${userRole}`;
+      const messageData = {
+        hui: {
+          [newMessageKey]: messageText
+        }
+      };
       
-      // Prepare data for PUT request
-      const hui = currentData.hui || {};
-      
-      // Add new message
-      hui[`${timestamp}-${userRole}`] = messageText;
-      
-      // Send PUT request
-      await fetch(apiUrl, {
+      // Send PUT request with only the new message
+      const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ hui })
+        body: JSON.stringify(messageData)
       });
       
-      // Update local messages (optional, since we'll get it in the next poll)
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+      
+      // Update local messages
       const newMessage: Message = {
         timestamp,
         sender: userRole,
@@ -100,8 +103,16 @@ const Index = () => {
         parseInt(a.timestamp) - parseInt(b.timestamp)
       ));
       
+      // Fetch messages to ensure we have the most up-to-date state
+      fetchMessages();
+      
     } catch (error) {
       console.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
     }
