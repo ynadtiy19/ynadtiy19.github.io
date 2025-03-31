@@ -16,6 +16,7 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [userRole, setUserRole] = useState<'sender' | 'receiver'>('sender');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const apiUrl = "https://getpantry.cloud/apiv1/pantry/2fbe822d-f24a-4c50-9218-636436f98e40/basket/ynadtiyuser";
 
   const scrollToBottom = () => {
@@ -26,13 +27,29 @@ const Index = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Function to fetch messages from the API
+  // 清除轮询定时器
+  const clearPollTimeout = () => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
+  };
+
+  // 设置轮询
+  const schedulePoll = (delay: number) => {
+    clearPollTimeout();
+    pollTimeoutRef.current = setTimeout(() => {
+      fetchMessages();
+    }, delay);
+  };
+
+  // 函数获取消息
   const fetchMessages = async () => {
     try {
       const response = await fetch(apiUrl);
       const data = await response.json();
       
-      // Extract messages
+      // 提取消息
       const messagesData = data.hui || {};
       const parsedMessages: Message[] = [];
       
@@ -45,33 +62,35 @@ const Index = () => {
         });
       }
       
-      // Sort by timestamp
+      // 按时间戳排序
       parsedMessages.sort((a, b) => parseInt(a.timestamp) - parseInt(b.timestamp));
       setMessages(parsedMessages);
+      
+      // 设置30秒后再次轮询
+      schedulePoll(30000);
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      console.error("获取消息错误:", error);
+      // 如果获取失败，5秒后重试
+      schedulePoll(5000);
     }
   };
 
-  // Initial fetch and setup polling
+  // 初始加载时获取消息
   useEffect(() => {
     fetchMessages();
     
-    // Poll for new messages every 3 seconds
-    const intervalId = setInterval(fetchMessages, 3000);
-    
-    // Cleanup interval on component unmount
-    return () => clearInterval(intervalId);
+    // 组件卸载时清除定时器
+    return () => clearPollTimeout();
   }, []);
 
   const handleSendMessage = async (messageText: string) => {
     setIsProcessing(true);
     
     try {
-      // Create timestamp
+      // 创建时间戳
       const timestamp = Date.now().toString();
       
-      // Create the message object with only the new message
+      // 创建只包含新消息的对象
       const newMessageKey = `${timestamp}-${userRole}`;
       const messageData = {
         hui: {
@@ -79,7 +98,7 @@ const Index = () => {
         }
       };
       
-      // Send PUT request with only the new message
+      // 发送PUT请求
       const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
@@ -89,10 +108,10 @@ const Index = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        throw new Error('发送消息失败');
       }
       
-      // Update local messages
+      // 更新本地消息
       const newMessage: Message = {
         timestamp,
         sender: userRole,
@@ -103,14 +122,15 @@ const Index = () => {
         parseInt(a.timestamp) - parseInt(b.timestamp)
       ));
       
-      // Fetch messages to ensure we have the most up-to-date state
-      fetchMessages();
+      // 3秒后获取一次最新消息
+      clearPollTimeout();
+      schedulePoll(3000);
       
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("发送消息错误:", error);
       toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
+        title: "错误",
+        description: "发送消息失败，请重试。",
         variant: "destructive"
       });
     } finally {
@@ -130,8 +150,8 @@ const Index = () => {
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500">
-              <p className="text-lg">No messages yet</p>
-              <p className="text-sm">Start a conversation as {userRole}</p>
+              <p className="text-lg">暂无消息</p>
+              <p className="text-sm">以 {userRole === 'sender' ? '发送者' : '接收者'} 身份开始对话</p>
             </div>
           </div>
         ) : (

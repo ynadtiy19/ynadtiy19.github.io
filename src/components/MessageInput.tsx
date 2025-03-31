@@ -35,7 +35,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isProcessing
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type a message..."
+          placeholder="输入消息..."
           className="flex-1 bg-transparent focus:outline-none text-gray-700 placeholder-gray-400"
           disabled={isProcessing}
         />
